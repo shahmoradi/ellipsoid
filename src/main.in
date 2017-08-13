@@ -1,0 +1,7 @@
+&general
+    ndMin = 2,
+    ndMax = 2,
+    npMin = 3,
+    npMax = 20,
+    ntest = 1000,
+/

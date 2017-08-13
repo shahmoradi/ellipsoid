@@ -1,24 +1,26 @@
 # rm -rf *.txt *.png
 
+# Modiy NLOPTDIR to your desired path for installation
+NLOPTDIR = /work/01902/ashahmor/LIBRARIES/NLOPT/
+# Modiy NLOPTSRC to the path where NLOPT source files exist
+NLOPTSRC = ../lib/nlopt-2.4.2/
+
+
 main: main.f90
-	ifort -debug -llapack -lblas -heap-arrays -g -traceback -check all -fp-stack-check -warn interface main.f90 -o main -lnlopt -lm
+	#ifort -debug -llapack -lblas -heap-arrays -g -traceback -check all -fp-stack-check -warn interface main.f90 -o main -lnlopt -lm
+	ifort -O2 -mkl main.f90 -o main -L$(NLOPTDIR)/lib -lnlopt -lm
+	@echo "DONE with O2 compilation"
 
-# ifort /O2 test_paranest.f90 -o main.exe
-# ifort /O3 test_paranest.f90 -o main.exe
-
-#@echo off
-# TIMEOUT 1 >nul 2>nul
-	ulimit -s 10000 
-# TIMEOUT 1 >nul 2>nul
-	@echo "done compiling main"
+debug:
+	ifort -debug -mkl -heap-arrays -g -traceback -check all -fp-stack-check -warn interface main.f90 -o main -L$(NLOPTDIR)/lib -lnlopt -lm
+	@echo "DONE with debug compilation"
 # REM TIMEOUT 1 >nul 2>nul
 
 clean:
 	rm -rf main *.mod *.obj *.pdb *.ilk *.smod *.txt
 
-lib:
-	rm -rf cobyla2.o
-	ifort -c cobyla2.f90 
+nlopt:
+	rm -rf $(NLOPTDIR)/*; cd $(NLOPTSRC); chmod 777 configure; ./configure --prefix=$(NLOPTDIR); make; make install
 
 run:
-	./main
+	ulimit -s unlimited; ./main

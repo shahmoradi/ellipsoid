@@ -1,0 +1,6 @@
+deprecated.lo: deprecated.c nlopt.h \
+ /opt/apps/gcc/4.9.3/lib/gcc/x86_64-unknown-linux-gnu/4.9.3/include/stddef.h
+
+nlopt.h:
+
+/opt/apps/gcc/4.9.3/lib/gcc/x86_64-unknown-linux-gnu/4.9.3/include/stddef.h:

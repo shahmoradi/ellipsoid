@@ -3,8 +3,67 @@ module MultivariateUniformSampler
   use Parameters, only: RK
 
   implicit none
-  include 'nlopt.f'
 
+  !***************************************************************************
+  !***************************************************************************
+  ! These NLOPT variables taken from nlopt.f
+  integer, parameter :: NLOPT_GN_DIRECT = 0
+  integer, parameter :: NLOPT_GN_DIRECT_L=1
+  integer, parameter :: NLOPT_GN_DIRECT_L_RAND=2
+  integer, parameter :: NLOPT_GN_DIRECT_NOSCAL=3
+  integer, parameter :: NLOPT_GN_DIRECT_L_NOSCAL=4
+  integer, parameter :: NLOPT_GN_DIRECT_L_RAND_NOSCAL=5
+  integer, parameter :: NLOPT_GN_ORIG_DIRECT=6
+  integer, parameter :: NLOPT_GN_ORIG_DIRECT_L=7
+  integer, parameter :: NLOPT_GD_STOGO=8
+  integer, parameter :: NLOPT_GD_STOGO_RAND=9
+  integer, parameter :: NLOPT_LD_LBFGS_NOCEDAL=10
+  integer, parameter :: NLOPT_LD_LBFGS=11
+  integer, parameter :: NLOPT_LN_PRAXIS=12
+  integer, parameter :: NLOPT_LD_VAR1=13
+  integer, parameter :: NLOPT_LD_VAR2=14
+  integer, parameter :: NLOPT_LD_TNEWTON=15
+  integer, parameter :: NLOPT_LD_TNEWTON_RESTART=16
+  integer, parameter :: NLOPT_LD_TNEWTON_PRECOND=17
+  integer, parameter :: NLOPT_LD_TNEWTON_PRECOND_RESTART=18
+  integer, parameter :: NLOPT_GN_CRS2_LM=19
+  integer, parameter :: NLOPT_GN_MLSL=20
+  integer, parameter :: NLOPT_GD_MLSL=21
+  integer, parameter :: NLOPT_GN_MLSL_LDS=22
+  integer, parameter :: NLOPT_GD_MLSL_LDS=23
+  integer, parameter :: NLOPT_LD_MMA=24
+  integer, parameter :: NLOPT_LN_COBYLA=25
+  integer, parameter :: NLOPT_LN_NEWUOA=26
+  integer, parameter :: NLOPT_LN_NEWUOA_BOUND=27
+  integer, parameter :: NLOPT_LN_NELDERMEAD=28
+  integer, parameter :: NLOPT_LN_SBPLX=29
+  integer, parameter :: NLOPT_LN_AUGLAG=30
+  integer, parameter :: NLOPT_LD_AUGLAG=31
+  integer, parameter :: NLOPT_LN_AUGLAG_EQ=32
+  integer, parameter :: NLOPT_LD_AUGLAG_EQ=33
+  integer, parameter :: NLOPT_LN_BOBYQA=34
+  integer, parameter :: NLOPT_GN_ISRES=35
+  integer, parameter :: NLOPT_AUGLAG=36
+  integer, parameter :: NLOPT_AUGLAG_EQ=37
+  integer, parameter :: NLOPT_G_MLSL=38
+  integer, parameter :: NLOPT_G_MLSL_LDS=39
+  integer, parameter :: NLOPT_LD_SLSQP=40
+  integer, parameter :: NLOPT_LD_CCSAQ=41
+  integer, parameter :: NLOPT_GN_ESCH=42
+  integer, parameter :: NLOPT_FAILURE=-1
+  integer, parameter :: NLOPT_INVALID_ARGS=-2
+  integer, parameter :: NLOPT_OUT_OF_MEMORY=-3
+  integer, parameter :: NLOPT_ROUNDOFF_LIMITED=-4
+  integer, parameter :: NLOPT_FORCED_STOP=-5
+  integer, parameter :: NLOPT_SUCCESS=1
+  integer, parameter :: NLOPT_STOPVAL_REACHED=2
+  integer, parameter :: NLOPT_FTOL_REACHED=3
+  integer, parameter :: NLOPT_XTOL_REACHED=4
+  integer, parameter :: NLOPT_MAXEVAL_REACHED=5
+  integer, parameter :: NLOPT_MAXTIME_REACHED=6
+  !***************************************************************************
+  !***************************************************************************
+  
   character(len=300)      :: directory, os, fileName
   integer , parameter     :: nd_glob=3
   real(RK), allocatable   :: CovOG(:,:), ScaleMat(:,:)
@@ -49,9 +108,8 @@ contains
     idum = -777
 
     slash = getSlash()
-    directory = './'  ! // slash // 'ellipsoid' // slash
+    directory = '..'//slash//'out'//slash
     !call execute_command_line( 'mkdir ' // trim(adjustl(directory)) )
-    !call system_clock(time)
     call date_and_time(date,time)
     dateNtime = trim(adjustl(date)) // trim(adjustl(time))
     nRuns = npMax
@@ -74,7 +132,7 @@ contains
       seed = -getRandIntLecuyer(1,10000,idum)
       call random_seed(put=seed)
 
-      write(*,*) 'itest: ', itest
+      !write(*,*) 'itest: ', itest
 
       npTot = np                                    ! total number of points
       ncMax = npTot/(nd+1)
@@ -84,7 +142,6 @@ contains
       allocate( Membership(npTot) , Point(nd,npTot) , Bound(nd,nc*npb) , CenterCrd(nd,nc) , EllVolTrue(nc) )
       allocate( BoundAMVE(nd,nc*npb) , CenterAMVE(nd,nc) , InvCovMat(nd,nd,nc) )
 
-      ! fileBase = 'mvuEllW'
       fileBase = 'allUniform'
       ! Generate some random clusters
       call getMVUfromEllipsoids(nc,nd,npTot,npb,trim(adjustl(fileBase)),EllVolTrue,CenterCrd,Bound,Point,Membership,InvCovMat)
@@ -130,7 +187,7 @@ contains
 
     end do
 
-    fileNameScale = '_'//trim(adjustl(fileBase))//'_'// 'ScaleData'//'_'//num2str(nd)//'_'//num2str(np)//'.txt'
+    fileNameScale = trim(adjustl(fileBase))//'_'// 'ScaleData'//'_'//num2str(nd)//'_'//num2str(np)//'.txt'
     open(unit=26,file=trim(adjustl(directory))//trim(adjustl(fileNameScale)),status='replace')
     scaleFormat = '(' // num2str(6) // 'F30.15)'
     do ip=1,ntest
@@ -311,7 +368,7 @@ contains
     !  if ( sqrt(mahalSq(1)) <= 1.d0 ) counter = counter + 1
     !end do
     !ScaleVec(3,1) = 1 - (counter / 1000000)
-    !print *, 'Blank Space: ', ScaleVec(3,1)
+    !write(*,*) 'Blank Space: ', ScaleVec(3,1)
     
     F_data(1:nd,1:nd) = InvCovMat(:,:,1)
     F_data(nd+1,:) = Mean
@@ -353,7 +410,7 @@ contains
     
     ! record results
     scaleFac = sqrt(maxf)
-    print *, 'Scale Factor = ', scaleFac
+    !write(*,*) 'Scale Factor = ', scaleFac
 
     ! scale AMVE with value found from optimization
     CovMat = scaleFac * CovMat
