@@ -2,30 +2,101 @@ clear;
 clc;
 close all;
 
-npi = 3;
-npf = 20;
-nd = 2;
-m = 1;
+listing = dir('../out/*.txt');
+fvals = split(listing(1).name,'_');
+ndMin = str2double(fvals(3));
+npMin = str2double(fvals(4));
+ndMax = str2double(fvals(3));
+npMax = str2double(fvals(4));
 
-np_scale_data = zeros(2,npf-npi+1);
-density_scale_data = zeros(2,npf-npi+1);
-
-for i = npi:npf
-    dataScale = load(['_allUniform_ScaleData_',num2str(nd),'_',num2str(i),'.txt']);
-    np_scale_data(1,m) = i;
-    np_scale_data(2,m) = median(log(dataScale(:,6)));
-    dataScale(:,4) = log(i ./ dataScale(:,4));
-    figure
-    scatter(dataScale(:,4), log(dataScale(:,6)));
-    xlabel('log(density)');
-    ylabel('log(scale factor)');
-    title(['nd: ',num2str(nd), ', np: ', num2str(i)]);
-    
-    m = m+1;
+for k=2:length(listing)
+   fvals = split(listing(k).name,'_');
+   
+   if str2double(fvals(3)) > ndMax
+       ndMax = str2double(fvals(3));
+   elseif str2double(fvals(3)) < ndMin
+       ndMin = str2double(fvals(3));
+   end
+       
+   if str2double(fvals(4)) > npMax
+       npMax = str2double(fvals(4));
+   elseif str2double(fvals(4)) < npMin
+       npMin = str2double(fvals(4));
+   end
 end
 
-figure 
-scatter(np_scale_data(1,:),np_scale_data(2,:));
+densitymat = [];
+
+for k = ndMin:ndMax
+    len = 14;
+    np_scale_data = zeros(2,len);
+    neg = zeros(1,len);
+    pos = zeros(1,len);
+    m = 1;
+    
+    %legendvals = {};
+    %figure
+    for i = k+1:k:k*15
+        
+        dataScale = load(fullfile('../out',['allUniform_ScaleData_',num2str(k),'_',num2str(i),'_.txt']));
+        
+        np_scale_data(1,m) = log10(i);
+        np_scale_data(2,m) = median(log10(log10((dataScale(:,6)))));
+        neg(1,m) = abs(np_scale_data(2,m) - quantile(log10(log10(dataScale(:,6))),.25));
+        pos(1,m) = abs(np_scale_data(2,m) - quantile(log10(log10(dataScale(:,6))),.75));
+        
+        dataScale(:,4) = log10(i) - dataScale(:,4);
+        dataScale(:,6) = log10(dataScale(:,6));
+        
+        densitymat = sortrows(dataScale(:,4:2:6));
+        densitymat(:,2) = movmean(densitymat(:,2),50);
+    
+        figure
+        scatter(dataScale(:,4), dataScale(:,6),'.','blue');
+        xlabel('log_{10}(density)');
+        ylabel('log_{10}(scale factor)');
+        title(['nd = ',num2str(k),', np = ', num2str(i)]);
+        hold on; 
+        scatter(densitymat(:,1),densitymat(:,2),'.','red');
+        hold off;
+        saveas(gcf, fullfile('../out',['density_scale_',num2str(k),'_',num2str(i),'.png']));
+        
+        %a = [num2str(i)];
+        %legendvals = [legendvals a]
+        
+        m = m + 1;
+        
+    end
+%     densitymat = sortrows(densitymat);
+%     legend(legendvals);
+%     xlabel('log_{10}(density)');
+%     ylabel('log_{10}(scale factor)');
+%     title(['nd: ',num2str(k)]);
+%     hold off;
+%     
+%     windowSize = 100; 
+%     b = (1/windowSize)*ones(1,windowSize);
+%     a = 1;
+%     densitymat(:,2) = filter(b,a,densitymat(:,2));
+%     
+%     figure
+%     plot(densitymat(:,1),densitymat(:,2),'.');
+%     xlabel('log_{10}(density)');
+%     ylabel('log_{10}(scale factor)');
+%     title(['nd = ',num2str(k)]);
+%     saveas(gcf, fullfile('../out',['density_scale_',num2str(k),'.png']));
+    
+    figure 
+    errorbar(np_scale_data(1,:),np_scale_data(2,:),neg,pos);
+    hold on;
+    scatter(np_scale_data(1,:),np_scale_data(2,:));
+    hold off;
+    xlabel('number of points');
+    ylabel('log_{10}(scale factor)');
+    title(['nd = ',num2str(k)]);
+    saveas(gcf, fullfile('../out',['np_scale_',num2str(k),'.png']));
+    
+end
 
 % for i = 1:10
 %     n = num2str(i);

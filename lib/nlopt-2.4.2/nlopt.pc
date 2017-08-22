@@ -1,4 +1,4 @@
-prefix=/work/01902/ashahmor/LIBRARIES/NLOPT
+prefix=/Users/travisdriver/Documents/Research/NLOPT
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include

@@ -6,6 +6,7 @@ module MultivariateUniformSampler
 
   !***************************************************************************
   !***************************************************************************
+
   ! These NLOPT variables taken from nlopt.f
   integer, parameter :: NLOPT_GN_DIRECT = 0
   integer, parameter :: NLOPT_GN_DIRECT_L=1
@@ -61,6 +62,7 @@ module MultivariateUniformSampler
   integer, parameter :: NLOPT_XTOL_REACHED=4
   integer, parameter :: NLOPT_MAXEVAL_REACHED=5
   integer, parameter :: NLOPT_MAXTIME_REACHED=6
+
   !***************************************************************************
   !***************************************************************************
   
@@ -187,7 +189,7 @@ contains
 
     end do
 
-    fileNameScale = trim(adjustl(fileBase))//'_'// 'ScaleData'//'_'//num2str(nd)//'_'//num2str(np)//'.txt'
+    fileNameScale = trim(adjustl(fileBase))//'_'// 'ScaleData'//'_'//num2str(nd)//'_'//num2str(np)//'_.txt'
     open(unit=26,file=trim(adjustl(directory))//trim(adjustl(fileNameScale)),status='replace')
     scaleFormat = '(' // num2str(6) // 'F30.15)'
     do ip=1,ntest
@@ -302,14 +304,15 @@ contains
       stop
     end if
 
-    do ic = 1,nc
-      istart = (ic-1)*npb
-      !istart = (ic-1)*npb + ic
-      !Bound(:,istart) = CenterCrd(:,ic)
-      do ipb = istart+1,istart+npb
-        Bound(:,ipb) = getRandPointOnEllipsoid(nd,CenterCrd(:,ic),CovMat(:,:,ic),Diagonal(:,ic))
-      end do
-    end do
+    !do ic = 1,nc
+    !  istart = (ic-1)*npb
+    !  !istart = (ic-1)*npb + ic
+    !  !Bound(:,istart) = CenterCrd(:,ic)
+    !  do ipb = istart+1,istart+npb
+    !    Bound(:,ipb) = getRandPointOnEllipsoid(nd,CenterCrd(:,ic),CovMat(:,:,ic),Diagonal(:,ic))
+    !  end do
+    !end do
+    Bound = 1;
 
   end subroutine getMVUfromEllipsoids
 
@@ -337,7 +340,7 @@ contains
     real(RK), intent(inout)      :: ScaleVec(6,1)
     integer                      :: ic, id, ip, ipb, istart, icc
     integer                      :: ires, maxeval
-    real(RK)                     :: x(nd), maxf, lb(nd), ub(nd)
+    real(RK)                     :: x(nd), maxf, lb(nd), ub(nd), tol
     integer*8                    :: opt
     character(len=*), intent(in) :: fileBase
     
@@ -354,7 +357,7 @@ contains
     CovMat = sqrt(MahalSqMax(1)) * CovMat
     Diagonal = sqrt(MahalSqMax(1))* Diagonal
     InvCovMat(:,:,ic) = getInvMatFromCholFac(nd,CovMat(:,:,ic),Diagonal(:,ic))
-    unscaledVol = product(Diagonal(:,ic))
+    unscaledVol = sum(log10(Diagonal(:,ic)))
 
     
     !do ip = 1,1000000
@@ -373,8 +376,8 @@ contains
     F_data(1:nd,1:nd) = InvCovMat(:,:,1)
     F_data(nd+1,:) = Mean
     
-    ! global optimization with NLOPT's DIRECT algoritm
-    call nlo_create(opt, NLOPT_GN_ORIG_DIRECT, nd)
+    ! global optimization with NLOPT's DIRECT algorithm
+    call nlo_create(opt, NLOPT_GN_DIRECT, nd)
     call nlo_set_max_objective(ires, opt, myfunc, F_data)
     call nlo_get_lower_bounds(ires, opt, lb)
     call nlo_get_upper_bounds(ires,opt, ub)
@@ -382,8 +385,11 @@ contains
     ub = radOG
     call nlo_set_lower_bounds(ires, opt, lb)
     call nlo_set_upper_bounds(ires, opt, ub)
-    call nlo_add_inequality_constraint(ires, opt, myconstraint1, CovOG, 1.D-6)
-    call nlo_set_xtol_rel(ires, opt, 1.D-4)
+    call nlo_add_inequality_constraint(ires, opt, myconstraint1, CovOG, 1.d-6)
+    tol = 1.e-4
+    call nlo_set_xtol_abs1(ires, opt, tol)
+    call nlo_set_ftol_rel(ires, opt, tol)
+    call nlo_get_ftol_rel(tol, opt)
     maxeval = 50000
     call nlo_set_maxeval(ires, opt, maxeval)
     call nlo_get_maxeval(maxeval, opt)
@@ -400,9 +406,11 @@ contains
     ub = radOG
     call nlo_set_lower_bounds(ires, opt, lb)
     call nlo_set_upper_bounds(ires, opt, ub)
-    call nlo_add_inequality_constraint(ires, opt, myconstraint1, CovOG, 1.D-14)
-    call nlo_add_inequality_constraint(ires, opt, myconstraint2, CovOG, 1.D-14)
-    call nlo_set_xtol_rel(ires, opt, 1.D-8)
+    call nlo_add_inequality_constraint(ires, opt, myconstraint1, CovOG, 1.d-14)
+    call nlo_add_inequality_constraint(ires, opt, myconstraint2, CovOG, 1.d-14)
+    tol = 1.e-8
+    call nlo_set_ftol_rel(ires, opt, tol)
+    call nlo_get_ftol_rel(tol, opt)
     call nlo_set_maxeval(ires, opt, maxeval)
     call nlo_get_maxeval(maxeval, opt)
     call nlo_optimize(ires, opt, x, maxf)
@@ -415,7 +423,7 @@ contains
     ! scale AMVE with value found from optimization
     CovMat = scaleFac * CovMat
     Diagonal = scaleFac * Diagonal
-    scaledVol = product(Diagonal(:,ic))
+    scaledVol = sum(log10(Diagonal(:,ic)))
 
     ScaleVec(1,1) = nd
     ScaleVec(2,1) = npTot
@@ -428,12 +436,13 @@ contains
     CovMat = scaleFac * CovMat
     Diagonal = scaleFac * Diagonal
 
-    do ic = 1,nc
-      istart = (ic-1)*npb
-      do ipb = istart+1,istart+npb
-        BoundAMVE(:,ipb) = getRandPointOnEllipsoid(nd,Mean,CovMat(:,:,ic),Diagonal(:,ic))
-      end do
-    end do
+    !do ic = 1,nc
+    !  istart = (ic-1)*npb
+    !  do ipb = istart+1,istart+npb
+    !    BoundAMVE(:,ipb) = getRandPointOnEllipsoid(nd,Mean,CovMat(:,:,ic),Diagonal(:,ic))
+    !  end do
+    !end do
+    BoundAMVE = 1;
 
   end subroutine getSamAMVE
 
