@@ -8,6 +8,7 @@ module MultivariateUniformSampler
   !***************************************************************************
 
   ! These NLOPT variables taken from nlopt.f
+  ! These NLOPT variables are taken from nlopt.f
   integer, parameter :: NLOPT_GN_DIRECT = 0
   integer, parameter :: NLOPT_GN_DIRECT_L=1
   integer, parameter :: NLOPT_GN_DIRECT_L_RAND=2
@@ -190,10 +191,11 @@ contains
     end do
 
     fileNameScale = trim(adjustl(fileBase))//'_'// 'ScaleData'//'_'//num2str(nd)//'_'//num2str(np)//'_.txt'
+    fileNameScale = trim(adjustl(fileBase))//'_'// 'ScaleData'//'_nd_'//num2str(nd)//'_np_'//num2str(np)//'.txt'
     open(unit=26,file=trim(adjustl(directory))//trim(adjustl(fileNameScale)),status='replace')
     scaleFormat = '(' // num2str(6) // 'F30.15)'
-    do ip=1,ntest
-      write(26,scaleFormat) ScaleMat(:,ip)
+    do itest=1,ntest
+      write(26,scaleFormat) ScaleMat(:,itest)
     end do
 
     deallocate( CovOG, ScaleMat )
